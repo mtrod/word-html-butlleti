@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word-a-HTML</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.quilljs.com/1.3.6/quill.snow.css">
+    <link rel="stylesheet" href="styles.css"> <!-- Placeholder for your CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.4.2/mammoth.browser.min.js"></script>
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+
+</head>
+<body>
+
+<div class="container-fluid mb-4" style="background: #38ff90;border-bottom: 1px solid black;"><div class="container"><h6 class="pb-2 pt-3 font-monospace fw-bold">Conversor Word-a-HTML</h6></div>
+    
+</div>
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <input class="form-control rounded-0 border font-monospace" type="file" id="fileInput" accept=".doc,.docx">
+        </div>
+
+        <div class="col">
+            <input class="form-control rounded-0 border font-monospace" type="text" id="titleInput" placeholder="Títol del missatge">
+        </div>
+    </div>
+    
+    <div class="row mb-3">
+        <div class="col">
+            <label for="editor" class="form-label fw-bold font-monospace">Previsualització</label>
+            <div class="preview-editor p-2 bg-white border">
+                <div id="toolbar" class="border mb-2">
+                    <button class="ql-bold"></button>
+                    <button class="ql-italic"></button>
+                    <button class="ql-underline"></button>
+                    <select class="ql-header">
+                        <option value="1">Header 1</option>
+                        <option value="2">Header 2</option>
+                        <option value="3">Header 3</option>
+                        <option value="4">Header 4</option>
+                        <option value="5">Header 5</option>
+                        <option value="6">Header 6</option>
+                        <option value="">Normal</option>
+                    </select>
+                    <button class="ql-link"></button>
+                    <button class="ql-align" value=""></button>
+                    <button class="ql-align" value="center"></button>
+                    <button class="ql-align" value="right"></button>
+                    <button class="ql-list" value="ordered"></button>
+                    <button class="ql-list" value="bullet"></button>
+                    <a id="customLinkButton" class="btn btn-dark rounded-0 btn-sm btn-customlink">Campus</a>
+                </div>
+
+                    <!-- Modal Structure -->
+                    <div id="urlModal" class="modal">
+                        <div class="modal-content rounded-0 border font-monospace">
+                            <span class="close-button">&times;</span>
+                            <input class="form-control border rounded-0" type="text" id="urlInput" placeholder="https://">
+                            <div class="autocomplete-list" id="autocompleteList"></div>
+
+                            <div class="form-check">
+                                <input class="form-check-input border" type="checkbox" type="checkbox" id="prependCheckbox"> 
+                                <label class="form-check-label" for="prependCheckbox">Login CAS</label>
+                            </div>
+
+                            <div class="form-check">
+                                <input class="form-check-input border" type="checkbox" type="checkbox" type="checkbox" id="secondPrependCheckbox">
+                                <label class="form-check-label" for="secondPrependCheckbox">Capçalera UOC</label>
+                            </div>
+
+                            <button id="insertLinkBtn" class="btn btn-dark font-monospace btn-sm mt-3 rounded-0">Inserir link</button>
+                        </div>
+                    </div>
+                
+                <div id="editor" class="bg-white border p-2" spellcheck="false"></div>
+            </div>
+        </div>
+        
+        <div class="col">
+            <label for="htmlOutput" class="form-label fw-bold font-monospace">HTML</label>
+            <textarea id="htmlOutput" class="font-monospace p-2 border rounded-0" placeholder="Sortida HTML editable..." spellcheck="false"></textarea>
+            
+            <div class="px-2 pt-2 mt-2 font-monospace bg-white border">
+                <label for="footerSelect" class="form-label fw-bold">Idioma del peu</label>
+                <div id="languageSelection" class="form-check form-check-inline">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input border" type="radio" name="language" value="ca" checked>
+                        <label class="form-check-label">Català</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input border" type="radio" name="language" value="es">
+                        <label class="form-check-label">Espanyol</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input border"  type="radio" name="language" value="en">
+                        <label class="form-check-label">Anglès</label>
+                    </div>
+                </div>
+            </div>
+
+            <button id="copyCodeBtn" class="btn btn-dark font-monospace btn-sm mt-3 rounded-0 px-2">Copia HTML</button>
+            <button id="previewButton" class="btn btn-dark font-monospace btn-sm mt-3 rounded-0 px-2">Vista prèvia</button>
+        </div>
+    </div>
+    
+    <div class="row mb-3">
+        <div id="preview"></div>
+    </div>
+
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+    const quill = new Quill('#editor', {
+        theme: 'snow',
+        modules: { toolbar: '#toolbar' }
+    });
+    
+    const titleInput = document.getElementById('titleInput');
+    const htmlOutput = document.getElementById('htmlOutput');
+    let savedRange = null; // Variable to store the selection range
+
+    function updateHtmlOutput(title, lang) {
+        const editorContent = quill.root.innerHTML;
+        const languageSnippets = {
+                ca: `La bústia del Servei d'Informació és només emissora de missatges. En el cas que tinguis qualsevol dubte, tens a la teva disposició el Servei d'Atenció del Campus Virtual.<br>En aquests moments, reps les comunicacions en català. Si vols, pots canviar-ho en qualsevol moment des del teu <em><a style="color: #000078; text-decoration: underline;" href="https://campus.uoc.edu/webapps/cas/login?service=https://campus.uoc.edu/UOC/a/varis/miss_informacio/js/FinestraCampus.html%3Fhtm=https://campus.uoc.edu/estudiant/espai-personal/ca/index.html" target="_blank">Espai personal / Informació personal / Canvi d'idioma dels missatges</a>.`,
+                es: `El buzón Servicio de información de la UOC es sólo emisor de mensajes. Si tienes cualquier duda, el Servicio de atención del Campus Virtual está a tu disposición. <br>En estos momentos recibes las comunicaciones en español. Si quieres, puedes cambiarlo en cualquier momento desde tu <em><a style="color: #000078; text-decoration: underline;" href="https://campus.uoc.edu/webapps/cas/login?service=https://campus.uoc.edu/UOC/a/varis/miss_informacio/js/FinestraCampus.html%3Fhtm=https://campus.uoc.edu/estudiant/espai-personal/es/index.html" target="_blank">Espacio personal / Información personal / Cambio de idioma de los mensajes</a></em>.`,
+                en: `The Information Service email address is only used to send out messages. Should you have any doubts, please consult the Student Services on the Virtual Campus. <br />You are currently receiving messages in English. You can change this whenever you want in your <em><a style="color: #000078; text-decoration: underline;" href="https://campus.uoc.edu/webapps/cas/login?service=https://campus.uoc.edu/UOC/a/varis/miss_informacio/js/FinestraCampus.html%3Fhtm=https://campus.uoc.edu/estudiant/espai-personal/en/index.html" target="_blank">Personal area / Personal information / Change the language for messages</a></em> section.`
+            };
+
+        htmlOutput.value = `<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="${lang}">
+ <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+ </head>
+ <body>
+  <div style="width: 100% !important; max-width: 600px !important; margin: auto;">
+   <table border="0" cellpadding="10" cellspacing="0" width="100%" class="contenidor">
+    <tr>
+     <td align="center" valign="top">
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" class="contingut">
+       <tr>
+        <td align="center" valign="top"></td>
+       </tr>
+       <tr>
+        <td align="center" valign="top">
+         <div class="block">
+          <table width="100%" bgcolor="#ffffff" cellpadding="0" cellspacing="0" border="0" id="backgroundTable" st-sortable="header" style="min-width:350px">
+           <tbody>
+            <tr>
+             <td colspan="3" align="right">
+              <div style="height:70px; padding-right:5px; padding-bottom:15px; background-image:url(https://campus.uoc.edu/estudiant/_resources/img/mail/logoUOC_cap_mail.png); background-repeat:no-repeat;">
+               <p style="color:#000075; font-size:20px; font-family: Arial, Geneva, sans-serif; line-height:22px; padding-top:10px; margin-top:0px; margin-bottom:0px; margin-left:203px; text-align:left;">
+                <strong>${title}</strong><br />
+                <strong> </strong>
+               </p>
+              </div>
+             </td>
+            </tr>
+           </tbody>
+          </table> 
+         </div>
+        </td>
+       </tr>
+       <tr>
+        <td valign="top">
+         <table border="0" cellpadding="0" cellspacing="0" width="100%" style="color: #000078; font-family: Arial, sans-serif; font-size: 16px; line-height: 145%; margin-top: 30px;">
+          <tr>
+           <td align="left" valign="top">  
+            <div width="100%" align="left" style="padding-bottom: 20px;">
+${editorContent}
+            </div>
+           </td>
+          </tr>
+          <tr>
+           <td valign="top"></td>
+          </tr>
+         </table>
+        </td>
+       </tr>
+       <tr>
+        <td align="center" valign="top">
+         <table width="100%" border="0" cellspacing="0" cellpadding="0">
+          <tbody>
+           <tr>
+            <td valign="top" height="18" align="center" style="background-color: #f0f0f0; background-image: url('https://campus.uoc.edu/UOC/a/img/mail/servei_informacio/blau_mari_4.gif'); background-repeat: repeat-x; ">&nbsp;</td>
+           </tr>
+           <tr>
+            <td valign="top" align="left" style="line-height: 165%; font-family: Arial, sans-serif; color: #000078; font-size: 14px; padding-left: 20px; padding-right: 20px; padding-bottom: 20px; background-color: #f0f0f0">
+${languageSnippets[lang]}
+            </td>
+           </tr>
+          </tbody>
+         </table>
+        </td>
+       </tr>
+      </table>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </body>
+</html>`;
+    }
+
+    function getSelectedLanguage() {
+        return document.querySelector('input[name="language"]:checked')?.value || 'ca';
+    }
+
+    quill.on('text-change', () => {
+        updateHtmlOutput(titleInput.value, getSelectedLanguage());
+    });
+
+    document.getElementById('fileInput').addEventListener('change', (event) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            mammoth.convertToHtml({ arrayBuffer: e.target.result })
+                .then(result => {
+                    quill.root.innerHTML = result.value;
+                    updateHtmlOutput(titleInput.value, 'ca');
+                })
+                .catch(console.error);
+        };
+        reader.readAsArrayBuffer(event.target.files[0]);
+    });
+
+    titleInput.addEventListener('input', () => {
+        updateHtmlOutput(titleInput.value, getSelectedLanguage());
+    });
+
+    document.getElementById('copyCodeBtn').addEventListener('click', () => {
+        htmlOutput.select();
+        document.execCommand('copy');
+    });
+
+    const urls = ["https://example.com", "https://example2.com", "https://example3.com"];
+    
+    const urlModal = document.getElementById('urlModal');
+    const urlInput = document.getElementById('urlInput');
+    const autocompleteList = document.getElementById('autocompleteList');
+
+    document.getElementById('customLinkButton').addEventListener('click', () => {
+        const range = quill.getSelection();
+        if (range) {
+            savedRange = range; // Save the current selection range
+            urlModal.style.display = 'block'; // Show the modal
+        } else {
+            alert('Selecciona el text a enllaçar.');
+        }
+    });
+
+    document.querySelector('.close-button').addEventListener('click', () => {
+        urlModal.style.display = 'none';
+        restoreSelection(); // Restore the selection when the modal is closed
+    });
+
+    window.addEventListener('click', (event) => {
+        if (event.target === urlModal) {
+            urlModal.style.display = 'none';
+            restoreSelection(); // Restore the selection when the modal is closed
+        }
+    });
+
+    function restoreSelection() {
+        if (savedRange) {
+            quill.setSelection(savedRange.index, savedRange.length);
+            savedRange = null; // Clear the saved range
+        }
+    }
+
+    urlInput.addEventListener('input', () => {
+        const query = urlInput.value.toLowerCase();
+        autocompleteList.innerHTML = '';
+        if (query) {
+            const filteredUrls = urls.filter(url => url.toLowerCase().includes(query));
+            filteredUrls.forEach(url => {
+                const item = document.createElement('div');
+                item.textContent = url;
+                item.classList.add('autocomplete-item');
+                item.onclick = () => {
+                    urlInput.value = url;
+                    autocompleteList.innerHTML = '';
+                };
+                autocompleteList.appendChild(item);
+            });
+        }
+    });
+
+    document.getElementById('insertLinkBtn').addEventListener('click', () => {
+        let urlInputValue = urlInput.value.trim();
+        const prepend = document.getElementById('prependCheckbox').checked ? 'https://campus.uoc.edu/webapps/cas/login?service=' : '';
+        const secondPrepend = document.getElementById('secondPrependCheckbox').checked ? 'https://campus.uoc.edu/UOC/a/varis/miss_informacio/js/FinestraCampus.html%3Fhtm=' : '';
+
+        // Combine the URL components
+        let fullUrl = prepend + secondPrepend + urlInputValue;
+
+        // Add protocol if missing https, so it doesn't default to about:blank bc it thinks it's a relative URL
+        if (!/^https?:\/\//i.test(fullUrl)) {
+            fullUrl = 'https://' + fullUrl; // Default to https
+        }
+
+        if (savedRange && fullUrl) {
+            const linkText = quill.getText(savedRange.index, savedRange.length) || "Link";
+            quill.deleteText(savedRange.index, savedRange.length);
+            quill.insertText(savedRange.index, linkText, 'link', fullUrl);
+            quill.setSelection(savedRange.index + linkText.length);
+        }
+
+        urlModal.style.display = 'none'; // Hide the modal
+    });
+
+    document.querySelectorAll('input[name="language"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            const lang = this.value;
+            updateHtmlOutput(titleInput.value, lang);
+        });
+    });
+});
+
+
+//PREVIEW
+document.getElementById('previewButton').addEventListener('click', function() {
+    const htmlContent = document.getElementById('htmlOutput').value;
+    document.getElementById('preview').innerHTML = htmlContent;
+    document.getElementById('preview').classList.add('px-2', 'py-3', 'bg-white', 'border');
+});
+
+</script>
+
+</body>
+</html>

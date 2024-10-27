@@ -45,13 +45,13 @@ body {background-color: #f3f1e5;}
     padding: 5px 12px;
     cursor: pointer;
 }
-.autocomplete-item:hover {background: #f0f0f0;}
+.autocomplete-item:hover {background: #38ff90;}
 #htmlOutput {
     height: 366px; /* Set a fixed height for the HTML output */
     width: 100%;
     resize: vertical; /* Allow vertical resizing */
 }
-#editor {height: 344px;}
+#editor {height: 347px;}
 .modal {
     display: none; /* Hidden by default */
     position: fixed; /* Stay in place */

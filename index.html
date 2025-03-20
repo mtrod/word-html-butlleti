@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Maquetador de butlletins</title>
+  <!-- Mammoth.js for DOCX conversion -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
+  <!-- GrapesJS -->
+  <script src="assets/js/grapes.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/grapesjs@latest/dist/css/grapes.min.css">
+  <!-- GrapesJS Newsletter Preset -->
+  <script src="assets/js/grapesjs-preset-newsletter.js"></script>
+  <!-- Custom Emoji Replacer -->
+  <script src="assets/js/emojiReplacer.js"></script>
+  <!-- External CSS -->
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+  <!-- Editor container -->
+  <div id="editor-container"></div>
+
+  <!-- Load external JS files -->
+  <script src="assets/js/baseTemplate.js"></script>
+  <script src="assets/js/mammothParser.js"></script>
+
+  <script>
+    // Initialize GrapesJS with the default (Catalan) base template.
+    const editor = grapesjs.init({
+      container: '#editor-container',
+      telemetry: false,
+      height: '100vh',
+      fromElement: false,
+      storageManager: { autoload: 0 },
+      components: baseTemplates.catalan.replace('{{content}}', ''),
+      plugins: ['grapesjs-preset-newsletter'],
+      pluginsOpts: {
+        'grapesjs-preset-newsletter': {
+          modalLabelImport: 'Paste all your code here below and click import',
+          modalLabelExport: 'Copy the code and use it wherever you want',
+          importPlaceholder: '<table class="table"><tr><td class="cell">Hello world!</td></tr></table>',
+          cellStyle: {
+            'font-size': '12px',
+            'font-weight': 300,
+            'vertical-align': 'top',
+            color: 'rgb(111, 119, 125)',
+            margin: 0,
+            padding: 0,
+          }
+        }
+      }
+      // Custom blocks, commands, and the template selector will be added in customBlocks.js.
+    });
+  </script>
+
+  <!-- Include custom blocks and new toolbar functionality -->
+  <script src="assets/js/customBlocks.js"></script>
+  <script>
+    // Add all custom blocks, components, commands, and the template dropdown.
+    addCustomBlocks(editor);
+  </script>
+
+  <!-- Script to add a "Copy Code" button with class "gjs-btn-prim" to the export modal -->
+  <script>
+    editor.on('modal:open', () => {
+      const contentEl = editor.Modal.getContentEl();
+      // Ensure the button isn't already added
+      if (contentEl && !contentEl.querySelector('#copy-code-btn')) {
+        const btn = document.createElement('button');
+        btn.id = 'copy-code-btn';
+        btn.classList.add('gjs-btn-prim'); // Adding the required class
+        btn.innerText = 'Copiar codi';
+        btn.style.marginTop = '10px'; // Optional styling for spacing
+        
+        btn.addEventListener('click', () => {
+          let code = '';
+          // Check if a CodeMirror field is present
+          const cmEl = contentEl.querySelector('.CodeMirror');
+          if (cmEl && cmEl.CodeMirror) {
+            code = cmEl.CodeMirror.getValue();
+          } else {
+            // Fallback: try to get a value from a textarea
+            const ta = contentEl.querySelector('textarea');
+            if (ta) {
+              code = ta.value;
+            }
+          }
+          // Wrap the code with <html> and </html>
+          const wrappedCode = `
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"></head>
+${code}
+</html>`;
+          navigator.clipboard.writeText(wrappedCode)
+            .catch(err => alert('Failed to copy code: ' + err));
+        });
+        
+        contentEl.appendChild(btn);
+      }
+    });
+  </script>
+</body>
+</html>

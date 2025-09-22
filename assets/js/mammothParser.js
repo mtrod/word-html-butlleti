@@ -10,25 +10,11 @@ async function parseDOCX(file) {
         // Postprocess the HTML content
         html = transformContent(html, editor);
 
-        // Inject into the current template
-        // Get the current HTML loaded in the editor
-        const currentHtml = editor.getHtml();
-
-        // Try to detect which base template is currently being used
-        const templateKey = Object.keys(baseTemplates).find(key =>
-          currentHtml.includes(baseTemplates[key].slice(0, 200)) // match based on unique starting pattern
-        );
-
-        // Fallback to Catalan if no match is found
-        const templateToUse = baseTemplates[templateKey] || baseTemplates.catalan;
-
-        // Inject the DOCX HTML into the matched base template
-        const fullHtml = templateToUse.replace('{{content}}', html);
-
-        // Set the new composed template as editor content
-        editor.setComponents(fullHtml);
-
-
+        // Inject into the current template (robust detection)
+const tplKey = detectTemplateFromCanvas(editor);
+const templateToUse = baseTemplates[tplKey] || baseTemplates.catalan;
+const fullHtml = templateToUse.replace('{{content}}', html);
+editor.setComponents(fullHtml);
 
         
     } catch (error) {
@@ -216,6 +202,39 @@ function isGray(color) {
     }
     return false;
 }
+
+function detectTemplateFromCanvas(editor) {
+  const html = (editor.getHtml() || '').toLowerCase();
+
+  // Heuristics based on unique assets/text inside body (present in your templates)
+  // EN
+  if (
+    html.includes('header-h1-en.png') ||             // header image EN
+    html.includes('news for students') ||            // EN table header text
+    html.includes('enquesta_butlleti_en.jpg') ||     // EN survey image
+    html.includes('personal area / personal information') // EN footer phrase
+  ) return 'english';
+
+  // ES
+  if (
+    html.includes('header-h1-es.png') ||             // header image ES
+    html.includes('noticias para el estudiantado') ||// ES table header text
+    html.includes('valoracix_es.png') ||             // ES survey image
+    html.includes('espacio personal / información personal') // ES footer phrase
+  ) return 'spanish';
+
+  // CA (default if not matched above)
+  if (
+    html.includes('header-h1-ca.png') ||             // header image CA
+    html.includes('notícies per a l\'estudiantat') ||// CA table header text
+    html.includes('valoracix_ca.png') ||             // CA survey image
+    html.includes('espai personal / informació personal') // CA footer phrase
+  ) return 'catalan';
+
+  // Fallback
+  return 'catalan';
+}
+
 
 function insertBlockByTag(tag, blockId, editor) {
     // Busca la marca como <p>##---blocktag##</p>

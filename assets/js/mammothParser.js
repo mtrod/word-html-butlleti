@@ -11,9 +11,26 @@ async function parseDOCX(file) {
         html = transformContent(html, editor);
 
         // Inject into the current template
-        editor.setComponents(
-            baseTemplates.catalan.replace('{{content}}', html)
+        // Get the current HTML loaded in the editor
+        const currentHtml = editor.getHtml();
+
+        // Try to detect which base template is currently being used
+        const templateKey = Object.keys(baseTemplates).find(key =>
+          currentHtml.includes(baseTemplates[key].slice(0, 200)) // match based on unique starting pattern
         );
+
+        // Fallback to Catalan if no match is found
+        const templateToUse = baseTemplates[templateKey] || baseTemplates.catalan;
+
+        // Inject the DOCX HTML into the matched base template
+        const fullHtml = templateToUse.replace('{{content}}', html);
+
+        // Set the new composed template as editor content
+        editor.setComponents(fullHtml);
+
+
+
+        
     } catch (error) {
         console.error("Error during DOCX conversion:", error);
         alert("Error converting DOCX file. Please ensure the file is valid and try again.");

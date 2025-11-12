@@ -35,7 +35,8 @@ function replaceEmojis(html) {
   const emojiRegex = /(\p{Extended_Pictographic})/gu;
   return html.replace(emojiRegex, (match) => {
     const url = getEmojiUrl(match);
-    return `<img src="${url}" alt="${match}" style="style="width:1.2em; max-width:100%; height:auto; vertical-align:middle;" />`;
+    return `<img src="${url}" alt="${match}" style="width:1.2em; max-width:100%; height:auto; vertical-align:middle;" />`;
   });
 }
+
 
